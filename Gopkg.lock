@@ -2,14 +2,18 @@
 
 
 [[projects]]
-  name = "github.com/Workiva/frugal"
-  packages = ["compiler/parser"]
-  revision = "ce0ac3a87cf41a2b5563d2b0316507785d7aaa5c"
-  version = "2.19.0"
+  name = "go.uber.org/thriftrw"
+  packages = [
+    "ast",
+    "idl",
+    "idl/internal"
+  ]
+  revision = "43dfafd7bb1c99f0460d645a1959b73f6dfa536f"
+  version = "v1.11.0"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "bde28ba07f3f1f9724411311c2eefdc5935879b2c34bb164cc926c77c4d7f7ad"
+  inputs-digest = "7919078ef035774fb13f42dbdd4a46212e0d61ee119860999bed6f7b808fef5d"
   solver-name = "gps-cdcl"
   solver-version = 1
