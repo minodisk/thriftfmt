@@ -78,90 +78,107 @@ func traverse(tree *ast.Program, w io.Writer) error {
 		fmt.Println(definition.Info().Line)
 	}
 
-	// var indent Indent
-	//
-	// var isInclude = false
-	// for _, header := range tree.Headers {
-	// 	switch h := header.(type) {
-	// 	case *ast.Include:
-	// 		if !isInclude {
-	// 			fmt.Fprintf(w, "\n")
-	// 			isInclude = true
-	// 		}
-	// 		fmt.Fprintf(w, "%sinclude ", indent)
-	// 		if h.Name != "" {
-	// 			fmt.Fprintf(w, "%s ", h.Name)
-	// 		}
-	// 		fmt.Fprintf(w, "\"%s\"\n", h.Path)
-	// 	case *ast.Namespace:
-	// 		if isInclude {
-	// 			fmt.Fprintf(w, "\n")
-	// 			isInclude = false
-	// 		}
-	// 		fmt.Fprintf(w, "%snamespace %s %s\n", indent, h.Scope, h.Name)
-	// 	}
-	// }
-	//
-	// fmt.Fprintf(w, "\n")
-	//
-	// for _, definition := range tree.Definitions {
-	// 	fmt.Println(definition.Info())
-	//
-	// 	switch d := definition.(type) {
-	// 	case *ast.Constant:
-	// 		printDoc(w, indent, d.Doc)
-	// 		fmt.Fprintf(w, "%sconst %s %s = %s\n", indent, d.Type, d.Name, constantValue(d.Value))
-	//
-	// 	case *ast.Struct:
-	// 		printDoc(w, indent, d.Doc)
-	// 		fmt.Fprintf(w, "%sstruct %s {", indent, d.Name)
-	// 		if len(d.Fields) > 0 {
-	// 			fmt.Fprintf(w, "\n")
-	// 			indent++
-	// 			for _, field := range d.Fields {
-	// 				printField(w, indent, field)
-	// 			}
-	// 			indent--
-	// 		}
-	// 		fmt.Fprintf(w, "%s}\n\n", indent)
-	//
-	// 	case *ast.Service:
-	// 		printDoc(w, indent, d.Doc)
-	// 		fmt.Fprintf(w, "service %s {", d.Name)
-	// 		if len(d.Functions) > 0 {
-	// 			fmt.Fprint(w, "\n\n")
-	// 			indent++
-	// 			for _, function := range d.Functions {
-	// 				printDoc(w, indent, function.Doc)
-	// 				fmt.Fprintf(w, "%s%s%s%s(", indent, oneWay(function.OneWay), returnType(function.ReturnType), function.Name)
-	// 				if len(function.Parameters) > 0 {
-	// 					indent++
-	// 					fmt.Fprint(w, "\n")
-	// 					for _, parameter := range function.Parameters {
-	// 						printField(w, indent, parameter)
-	// 					}
-	// 					indent--
-	// 				}
-	// 				fmt.Fprintf(w, "%s)", indent)
-	//
-	// 				if len(function.Exceptions) > 0 {
-	// 					fmt.Fprintf(w, " throws (\n")
-	// 					indent++
-	// 					for _, exception := range function.Exceptions {
-	// 						printField(w, indent, exception)
-	// 					}
-	// 					indent--
-	// 					fmt.Fprintf(w, "%s)", indent)
-	// 				}
-	//
-	// 				// function.Annotations
-	// 				io.WriteString(w, "\n\n")
-	// 			}
-	// 			indent--
-	// 		}
-	// 		fmt.Fprintf(w, "}\n\n")
-	// 	}
-	// }
+	var indent Indent
+
+	var isInclude = false
+	for _, header := range tree.Headers {
+		switch h := header.(type) {
+		case *ast.Include:
+			if !isInclude {
+				fmt.Fprintf(w, "\n")
+				isInclude = true
+			}
+			fmt.Fprintf(w, "%sinclude ", indent)
+			if h.Name != "" {
+				fmt.Fprintf(w, "%s ", h.Name)
+			}
+			fmt.Fprintf(w, "\"%s\"\n", h.Path)
+		case *ast.Namespace:
+			if isInclude {
+				fmt.Fprintf(w, "\n")
+				isInclude = false
+			}
+			fmt.Fprintf(w, "%snamespace %s %s\n", indent, h.Scope, h.Name)
+		}
+	}
+
+	fmt.Fprintf(w, "\n")
+
+	for _, definition := range tree.Definitions {
+		//fmt.Println(definition.Info())
+
+		switch d := definition.(type) {
+		case *ast.Constant:
+			printDoc(w, indent, d.Doc)
+			fmt.Fprintf(w, "%sconst %s %s = %s\n", indent, d.Type, d.Name, constantValue(d.Value))
+
+		case *ast.Enum:
+			printDoc(w, indent, d.Doc)
+			fmt.Fprintf(w, "%senum %s {", indent, d.Name)
+			if len(d.Items) == 0 {
+				fmt.Fprintf(w, "}")
+			} else {
+				fmt.Fprintf(w, "\n")
+				indent++
+				for _, item := range d.Items {
+					fmt.Fprintf(w, "%s%s = %d\n", indent, item.Name, *item.Value)
+				}
+				indent--
+				fmt.Fprintf(w, "%s}\n\n", indent)
+			}
+
+		case *ast.Struct:
+			printDoc(w, indent, d.Doc)
+			fmt.Fprintf(w, "%sstruct %s {", indent, d.Name)
+			if len(d.Fields) > 0 {
+				fmt.Fprintf(w, "\n")
+				indent++
+				for _, field := range d.Fields {
+					printField(w, indent, field)
+				}
+				indent--
+			}
+			fmt.Fprintf(w, "%s}\n\n", indent)
+
+		case *ast.Service:
+			printDoc(w, indent, d.Doc)
+			fmt.Fprintf(w, "service %s {", d.Name)
+			if len(d.Functions) > 0 {
+				fmt.Fprint(w, "\n\n")
+				indent++
+				for _, function := range d.Functions {
+					printDoc(w, indent, function.Doc)
+					fmt.Fprintf(w, "%s%s%s%s(", indent, oneWay(function.OneWay), returnType(function.ReturnType), function.Name)
+					if len(function.Parameters) > 0 {
+						fmt.Fprint(w, "\n")
+						indent++
+						for _, parameter := range function.Parameters {
+							printField(w, indent, parameter)
+						}
+						indent--
+						fmt.Fprintf(w, "%s)", indent)
+					} else {
+						fmt.Fprintf(w, ")")
+					}
+
+					if len(function.Exceptions) > 0 {
+						fmt.Fprintf(w, " throws (\n")
+						indent++
+						for _, exception := range function.Exceptions {
+							printField(w, indent, exception)
+						}
+						indent--
+						fmt.Fprintf(w, "%s)", indent)
+					}
+
+					// function.Annotations
+					io.WriteString(w, "\n\n")
+				}
+				indent--
+			}
+			fmt.Fprintf(w, "}\n\n")
+		}
+	}
 	return nil
 }
 
