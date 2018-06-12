@@ -10,6 +10,8 @@ import (
 
 	"go.uber.org/thriftrw/ast"
 	"go.uber.org/thriftrw/idl"
+	"bytes"
+	"sort"
 )
 
 type options struct {
@@ -32,6 +34,7 @@ func main() {
 func _main() error {
 	_, files := parseFlag()
 	for _, file := range files {
+		//buf := bytes.Buffer{}
 		if err := format(file, os.Stdout); err != nil {
 			return err
 		}
@@ -39,16 +42,90 @@ func _main() error {
 	return nil
 }
 
+type Comment struct {
+	Line int
+	Body string
+}
+
+type CommentInfo struct {
+	Line int
+}
+
+func (c Comment) Info() CommentInfo  {
+	return CommentInfo{Line: c.Line}
+}
+
 func format(file string, w io.Writer) error {
 	buf, err := ioutil.ReadFile(file)
 	if err != nil {
 		return err
 	}
+
+	comments := []Comment{}
+	line := 1
+	length := len(buf)
+	for i := 0; i < length; i++ {
+		b := buf[i]
+		switch b {
+		case '\n':
+			line++
+		case '/':
+			if buf[i+1] == '*' && buf[i+2] != '*' {
+				l := line
+				body := &bytes.Buffer{}
+				commentLoop:
+				for ; i < length; i++ {
+					c := buf[i]
+					body.WriteByte(c)
+					switch c {
+					case '\n':
+						line++
+					case '*':
+						if buf[i+1] == '/' {
+							body.WriteByte(buf[i+1])
+							comments = append(comments, Comment{
+								Line: l,
+								Body: body.String(),
+							})
+							break commentLoop
+						}
+					}
+				}
+			}
+		}
+	}
+
 	tree, err := idl.Parse(buf)
 	if err != nil {
 		return err
 	}
-	return traverse(tree, w)
+
+	blocks := []Block{}
+	for _, c := range comments {
+		blocks = append(blocks,Block{
+			c.Info().Line, c,
+		})
+	}
+	for _,h := range tree.Headers {
+		blocks = append(blocks,Block{
+			h.Info().Line, h,
+		})
+	}
+	for _,d := range tree.Definitions {
+		blocks = append(blocks,Block{
+			d.Info().Line, d,
+		})
+	}
+	sort.Slice(blocks, func(i,j int)bool {
+		return blocks[i].Line < blocks[j].Line
+	})
+
+	return traverse(blocks, w)
+}
+
+type Block struct {
+	Line int
+	Content interface{}
 }
 
 func constantValue(value ast.ConstantValue) string {
@@ -69,58 +146,37 @@ func constantValue(value ast.ConstantValue) string {
 	}
 }
 
-func traverse(tree *ast.Program, w io.Writer) error {
-
-	for _, header := range tree.Headers {
-		fmt.Println(header.Info().Line)
-	}
-	for _, definition := range tree.Definitions {
-		fmt.Println(definition.Info().Line)
-	}
+func traverse(blocks []Block, w io.Writer) error {
 
 	var indent Indent
 
-	var isInclude = false
-	for _, header := range tree.Headers {
-		switch h := header.(type) {
+	for _, block := range blocks{
+		switch c := block.Content.(type) {
+		case Comment:
+			fmt.Fprintf(w, "%s\n\n", c.Body)
+
 		case *ast.Include:
-			if !isInclude {
-				fmt.Fprintf(w, "\n")
-				isInclude = true
-			}
 			fmt.Fprintf(w, "%sinclude ", indent)
-			if h.Name != "" {
-				fmt.Fprintf(w, "%s ", h.Name)
+			if c.Name != "" {
+				fmt.Fprintf(w, "%s ", c.Name)
 			}
-			fmt.Fprintf(w, "\"%s\"\n", h.Path)
+			fmt.Fprintf(w, "\"%s\"\n", c.Path)
 		case *ast.Namespace:
-			if isInclude {
-				fmt.Fprintf(w, "\n")
-				isInclude = false
-			}
-			fmt.Fprintf(w, "%snamespace %s %s\n", indent, h.Scope, h.Name)
-		}
-	}
-
-	fmt.Fprintf(w, "\n")
-
-	for _, definition := range tree.Definitions {
-		//fmt.Println(definition.Info())
-
-		switch d := definition.(type) {
+			fmt.Fprintf(w, "%snamespace %s %s\n", indent, c.Scope, c.Name)
 		case *ast.Constant:
-			printDoc(w, indent, d.Doc)
-			fmt.Fprintf(w, "%sconst %s %s = %s\n", indent, d.Type, d.Name, constantValue(d.Value))
+			printDoc(w, indent, c.Doc)
+			fmt.Fprintf(w, "%sconst %s %s = %s\n", indent, c.Type, c.Name, constantValue(c.Value))
 
 		case *ast.Enum:
-			printDoc(w, indent, d.Doc)
-			fmt.Fprintf(w, "%senum %s {", indent, d.Name)
-			if len(d.Items) == 0 {
+			printDoc(w, indent, c.Doc)
+			fmt.Fprintf(w, "%senum %s {", indent, c.Name)
+			if len(c.Items) == 0 {
 				fmt.Fprintf(w, "}")
 			} else {
 				fmt.Fprintf(w, "\n")
 				indent++
-				for _, item := range d.Items {
+				for _, item := range c.Items {
+					//fmt.Println(item.Line)
 					fmt.Fprintf(w, "%s%s = %d\n", indent, item.Name, *item.Value)
 				}
 				indent--
@@ -128,12 +184,12 @@ func traverse(tree *ast.Program, w io.Writer) error {
 			}
 
 		case *ast.Struct:
-			printDoc(w, indent, d.Doc)
-			fmt.Fprintf(w, "%sstruct %s {", indent, d.Name)
-			if len(d.Fields) > 0 {
+			printDoc(w, indent, c.Doc)
+			fmt.Fprintf(w, "%sstruct %s {", indent, c.Name)
+			if len(c.Fields) > 0 {
 				fmt.Fprintf(w, "\n")
 				indent++
-				for _, field := range d.Fields {
+				for _, field := range c.Fields {
 					printField(w, indent, field)
 				}
 				indent--
@@ -141,18 +197,20 @@ func traverse(tree *ast.Program, w io.Writer) error {
 			fmt.Fprintf(w, "%s}\n\n", indent)
 
 		case *ast.Service:
-			printDoc(w, indent, d.Doc)
-			fmt.Fprintf(w, "service %s {", d.Name)
-			if len(d.Functions) > 0 {
+			printDoc(w, indent, c.Doc)
+			fmt.Fprintf(w, "service %s {", c.Name)
+			if len(c.Functions) > 0 {
 				fmt.Fprint(w, "\n\n")
 				indent++
-				for _, function := range d.Functions {
+				for _, function := range c.Functions {
+					//fmt.Println(function.Line)
 					printDoc(w, indent, function.Doc)
 					fmt.Fprintf(w, "%s%s%s%s(", indent, oneWay(function.OneWay), returnType(function.ReturnType), function.Name)
 					if len(function.Parameters) > 0 {
 						fmt.Fprint(w, "\n")
 						indent++
 						for _, parameter := range function.Parameters {
+							//fmt.Println(parameter.Line)
 							printField(w, indent, parameter)
 						}
 						indent--
