@@ -1,99 +1,24 @@
-package main
+package formatter
 
 import (
-	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
-	"os"
+	"sort"
 	"strings"
 
+	"github.com/minodisk/thriftfmt/parser"
 	"go.uber.org/thriftrw/ast"
 	"go.uber.org/thriftrw/idl"
-	"bytes"
-	"sort"
 )
 
-type options struct {
-	display bool
-	report  bool
-	list    bool
-	write   bool
-}
-
-func main() {
-	if err := _main(); err != nil {
-		_, e := os.Stderr.WriteString(fmt.Sprintf("%s", err))
-		if e != nil {
-			// do nothing
-		}
-		os.Exit(2)
-	}
-}
-
-func _main() error {
-	_, files := parseFlag()
-	for _, file := range files {
-		//buf := bytes.Buffer{}
-		if err := format(file, os.Stdout); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-type Comment struct {
-	Line int
-	Body string
-}
-
-type CommentInfo struct {
-	Line int
-}
-
-func (c Comment) Info() CommentInfo  {
-	return CommentInfo{Line: c.Line}
-}
-
-func format(file string, w io.Writer) error {
+func Format(file string, w io.Writer) error {
 	buf, err := ioutil.ReadFile(file)
 	if err != nil {
 		return err
 	}
 
-	comments := []Comment{}
-	line := 1
-	length := len(buf)
-	for i := 0; i < length; i++ {
-		b := buf[i]
-		switch b {
-		case '\n':
-			line++
-		case '/':
-			if buf[i+1] == '*' && buf[i+2] != '*' {
-				l := line
-				body := &bytes.Buffer{}
-				commentLoop:
-				for ; i < length; i++ {
-					c := buf[i]
-					body.WriteByte(c)
-					switch c {
-					case '\n':
-						line++
-					case '*':
-						if buf[i+1] == '/' {
-							body.WriteByte(buf[i+1])
-							comments = append(comments, Comment{
-								Line: l,
-								Body: body.String(),
-							})
-							break commentLoop
-						}
-					}
-				}
-			}
-		}
-	}
+	comments := parser.ParseComments(buf)
 
 	tree, err := idl.Parse(buf)
 	if err != nil {
@@ -102,21 +27,21 @@ func format(file string, w io.Writer) error {
 
 	blocks := []Block{}
 	for _, c := range comments {
-		blocks = append(blocks,Block{
+		blocks = append(blocks, Block{
 			c.Info().Line, c,
 		})
 	}
-	for _,h := range tree.Headers {
-		blocks = append(blocks,Block{
+	for _, h := range tree.Headers {
+		blocks = append(blocks, Block{
 			h.Info().Line, h,
 		})
 	}
-	for _,d := range tree.Definitions {
-		blocks = append(blocks,Block{
+	for _, d := range tree.Definitions {
+		blocks = append(blocks, Block{
 			d.Info().Line, d,
 		})
 	}
-	sort.Slice(blocks, func(i,j int)bool {
+	sort.Slice(blocks, func(i, j int) bool {
 		return blocks[i].Line < blocks[j].Line
 	})
 
@@ -124,7 +49,7 @@ func format(file string, w io.Writer) error {
 }
 
 type Block struct {
-	Line int
+	Line    int
 	Content interface{}
 }
 
@@ -132,11 +57,11 @@ func constantValue(value ast.ConstantValue) string {
 	switch v := value.(type) {
 	default:
 		return fmt.Sprint(v)
-	// case ast.ConstantBoolean,
-	// 	ast.ConstantInteger,
-	// 	ast.ConstantString,
-	// 	ast.ConstantDouble:
-	// 	return fmt.Sprint(v)
+		// case ast.ConstantBoolean,
+		// 	ast.ConstantInteger,
+		// 	ast.ConstantString,
+		// 	ast.ConstantDouble:
+		// 	return fmt.Sprint(v)
 	case ast.ConstantMap:
 		return "{}"
 	case ast.ConstantList:
@@ -147,12 +72,11 @@ func constantValue(value ast.ConstantValue) string {
 }
 
 func traverse(blocks []Block, w io.Writer) error {
-
 	var indent Indent
 
-	for _, block := range blocks{
+	for _, block := range blocks {
 		switch c := block.Content.(type) {
-		case Comment:
+		case parser.Comment:
 			fmt.Fprintf(w, "%s\n\n", c.Body)
 
 		case *ast.Include:
@@ -278,25 +202,4 @@ func requiredness(r ast.Requiredness) string {
 	case ast.Optional:
 		return "optional "
 	}
-}
-
-type Indent int
-
-func (indent Indent) String() string {
-	return strings.Repeat("  ", int(indent))
-}
-
-func parseFlag() (options, []string) {
-	display := flag.Bool("d", false, "display diffs instead of rewriting files")
-	report := flag.Bool("e", false, "report all errors (not just the first 10 on different lines)")
-	list := flag.Bool("l", false, "list files whose formatting differs from gofmt's")
-	write := flag.Bool("w", false, "write result to (source) file instead of stdout")
-	flag.Parse()
-	files := flag.Args()
-	return options{
-		*display,
-		*report,
-		*list,
-		*write,
-	}, files
 }
