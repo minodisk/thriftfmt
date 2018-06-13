@@ -26,8 +26,8 @@
 
 
 [[constraint]]
-  name = "github.com/Workiva/frugal"
-  version = "2.19.0"
+  name = "go.uber.org/thriftrw"
+  version = "1.11.0"
 
 [prune]
   go-tests = true
