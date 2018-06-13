@@ -38,7 +38,7 @@ func _main() error {
 func parseFlag() (options, []string) {
 	display := flag.Bool("d", false, "display diffs instead of rewriting files")
 	report := flag.Bool("e", false, "report all errors (not just the first 10 on different lines)")
-	list := flag.Bool("l", false, "list files whose formatting differs from gofmt's")
+	list := flag.Bool("l", false, "list files whose formatting differs from thriftfmt's")
 	write := flag.Bool("w", false, "write result to (source) file instead of stdout")
 	flag.Parse()
 	files := flag.Args()

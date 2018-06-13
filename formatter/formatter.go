@@ -1,13 +1,13 @@
 package formatter
 
 import (
-	"fmt"
 	"io"
 	"io/ioutil"
 	"sort"
-	"strings"
 
+	"github.com/minodisk/thriftfmt/formatter/printer"
 	"github.com/minodisk/thriftfmt/parser"
+	"github.com/minodisk/thriftfmt/token"
 	"go.uber.org/thriftrw/ast"
 	"go.uber.org/thriftrw/idl"
 )
@@ -53,153 +53,26 @@ type Block struct {
 	Content interface{}
 }
 
-func constantValue(value ast.ConstantValue) string {
-	switch v := value.(type) {
-	default:
-		return fmt.Sprint(v)
-		// case ast.ConstantBoolean,
-		// 	ast.ConstantInteger,
-		// 	ast.ConstantString,
-		// 	ast.ConstantDouble:
-		// 	return fmt.Sprint(v)
-	case ast.ConstantMap:
-		return "{}"
-	case ast.ConstantList:
-		return "[]"
-	case ast.ConstantReference:
-		return v.Name
-	}
-}
-
 func traverse(blocks []Block, w io.Writer) error {
-	var indent Indent
+	var i printer.Indent
 
 	for _, block := range blocks {
 		switch c := block.Content.(type) {
-		case parser.Comment:
-			fmt.Fprintf(w, "%s\n\n", c.Body)
-
+		case *token.Comment:
+			printer.PrintComment(w, i, c)
 		case *ast.Include:
-			fmt.Fprintf(w, "%sinclude ", indent)
-			if c.Name != "" {
-				fmt.Fprintf(w, "%s ", c.Name)
-			}
-			fmt.Fprintf(w, "\"%s\"\n", c.Path)
+			printer.PrintInclude(w, i, c)
 		case *ast.Namespace:
-			fmt.Fprintf(w, "%snamespace %s %s\n", indent, c.Scope, c.Name)
+			printer.PrintNamespace(w, i, c)
 		case *ast.Constant:
-			printDoc(w, indent, c.Doc)
-			fmt.Fprintf(w, "%sconst %s %s = %s\n", indent, c.Type, c.Name, constantValue(c.Value))
-
+			printer.PrintConstant(w, i, c)
 		case *ast.Enum:
-			printDoc(w, indent, c.Doc)
-			fmt.Fprintf(w, "%senum %s {", indent, c.Name)
-			if len(c.Items) == 0 {
-				fmt.Fprintf(w, "}")
-			} else {
-				fmt.Fprintf(w, "\n")
-				indent++
-				for _, item := range c.Items {
-					//fmt.Println(item.Line)
-					fmt.Fprintf(w, "%s%s = %d\n", indent, item.Name, *item.Value)
-				}
-				indent--
-				fmt.Fprintf(w, "%s}\n\n", indent)
-			}
-
+			printer.PrintEnum(w, i, c)
 		case *ast.Struct:
-			printDoc(w, indent, c.Doc)
-			fmt.Fprintf(w, "%sstruct %s {", indent, c.Name)
-			if len(c.Fields) > 0 {
-				fmt.Fprintf(w, "\n")
-				indent++
-				for _, field := range c.Fields {
-					printField(w, indent, field)
-				}
-				indent--
-			}
-			fmt.Fprintf(w, "%s}\n\n", indent)
-
+			printer.PrintStruct(w, i, c)
 		case *ast.Service:
-			printDoc(w, indent, c.Doc)
-			fmt.Fprintf(w, "service %s {", c.Name)
-			if len(c.Functions) > 0 {
-				fmt.Fprint(w, "\n\n")
-				indent++
-				for _, function := range c.Functions {
-					//fmt.Println(function.Line)
-					printDoc(w, indent, function.Doc)
-					fmt.Fprintf(w, "%s%s%s%s(", indent, oneWay(function.OneWay), returnType(function.ReturnType), function.Name)
-					if len(function.Parameters) > 0 {
-						fmt.Fprint(w, "\n")
-						indent++
-						for _, parameter := range function.Parameters {
-							//fmt.Println(parameter.Line)
-							printField(w, indent, parameter)
-						}
-						indent--
-						fmt.Fprintf(w, "%s)", indent)
-					} else {
-						fmt.Fprintf(w, ")")
-					}
-
-					if len(function.Exceptions) > 0 {
-						fmt.Fprintf(w, " throws (\n")
-						indent++
-						for _, exception := range function.Exceptions {
-							printField(w, indent, exception)
-						}
-						indent--
-						fmt.Fprintf(w, "%s)", indent)
-					}
-
-					// function.Annotations
-					io.WriteString(w, "\n\n")
-				}
-				indent--
-			}
-			fmt.Fprintf(w, "}\n\n")
+			printer.PrintService(w, i, c)
 		}
 	}
 	return nil
-}
-
-func printDoc(w io.Writer, indent Indent, doc string) {
-	if len(doc) == 0 {
-		return
-	}
-	fmt.Fprintf(w, "%s/**\n", indent)
-	for _, line := range strings.Split(doc, "\n") {
-		fmt.Fprintf(w, "%s * %s\n", indent, line)
-	}
-	fmt.Fprintf(w, "%s */\n", indent)
-}
-
-func printField(w io.Writer, indent Indent, field *ast.Field) {
-	fmt.Fprintf(w, "%s%d: %s%s %s\n", indent, field.ID, requiredness(field.Requiredness), field.Type, field.Name)
-}
-
-func oneWay(oneWay bool) string {
-	if oneWay {
-		return "oneway "
-	}
-	return ""
-}
-
-func returnType(returnType ast.Type) string {
-	if returnType == nil {
-		return "void "
-	}
-	return fmt.Sprintf("%s ", returnType.String())
-}
-
-func requiredness(r ast.Requiredness) string {
-	switch r {
-	default:
-		return ""
-	case ast.Required:
-		return "required "
-	case ast.Optional:
-		return "optional "
-	}
 }

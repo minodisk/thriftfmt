@@ -2,23 +2,12 @@ package parser
 
 import (
 	"bytes"
+
+	"github.com/minodisk/thriftfmt/token"
 )
 
-type Comment struct {
-	Line int
-	Body string
-}
-
-type CommentInfo struct {
-	Line int
-}
-
-func (c Comment) Info() CommentInfo {
-	return CommentInfo{Line: c.Line}
-}
-
-func ParseComments(buf []byte) []Comment {
-	comments := []Comment{}
+func ParseComments(buf []byte) []*token.Comment {
+	comments := []*token.Comment{}
 	line := 1
 	length := len(buf)
 	for i := 0; i < length; i++ {
@@ -40,7 +29,7 @@ func ParseComments(buf []byte) []Comment {
 					case '*':
 						if buf[i+1] == '/' {
 							body.WriteByte(buf[i+1])
-							comments = append(comments, Comment{
+							comments = append(comments, &token.Comment{
 								Line: l,
 								Body: body.String(),
 							})
