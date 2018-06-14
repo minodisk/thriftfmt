@@ -28,6 +28,10 @@ func main() {
 func _main() error {
 	_, files := parseFlag()
 	for _, file := range files {
+		file, err := os.Open(file)
+		if err != nil {
+			return err
+		}
 		if err := formatter.Format(file, os.Stdout); err != nil {
 			return err
 		}

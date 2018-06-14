@@ -22,10 +22,44 @@ func TestComment_ParseComment(t *testing.T) {
 				},
 			},
 		},
+		{
+			`/* foo *//* bar */`,
+			[]*token.Comment{
+				{
+					1,
+					`/* foo */`,
+				},
+				{
+					1,
+					`/* bar */`,
+				},
+			},
+		},
+		{
+			`/* foo */
+/* bar */`,
+			[]*token.Comment{
+				{
+					1,
+					`/* foo */`,
+				},
+				{
+					2,
+					`/* bar */`,
+				},
+			},
+		},
 	} {
 		got := parser.ParseComments([]byte(c.input))
 		if !reflect.DeepEqual(got, c.want) {
-			t.Errorf("\nwant: %v\n got: %v", c.want, got)
+			t.Error("want:")
+			for _, c := range c.want {
+				t.Error(*c)
+			}
+			t.Error(" got:")
+			for _, c := range got {
+				t.Error(*c)
+			}
 		}
 	}
 }

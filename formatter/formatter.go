@@ -12,8 +12,30 @@ import (
 	"go.uber.org/thriftrw/idl"
 )
 
-func Format(file string, w io.Writer) error {
-	buf, err := ioutil.ReadFile(file)
+type Line struct {
+	Number int
+	Nodes  []interface{}
+}
+
+func (l *Line) Append(n interface{}) {
+	l.Nodes = append(l.Nodes, n)
+}
+
+type Lines []*Line
+
+func (ls *Lines) At(n int) *Line {
+	for _, l := range *ls {
+		if l.Number == n {
+			return l
+		}
+	}
+	l := &Line{n, []interface{}{}}
+	*ls = append(*ls, l)
+	return l
+}
+
+func Format(r io.Reader, w io.Writer) error {
+	buf, err := ioutil.ReadAll(r)
 	if err != nil {
 		return err
 	}
@@ -25,52 +47,46 @@ func Format(file string, w io.Writer) error {
 		return err
 	}
 
-	blocks := []Block{}
+	ls := Lines{}
 	for _, c := range comments {
-		blocks = append(blocks, Block{
-			c.Info().Line, c,
-		})
+		l := ls.At(c.Info().Line)
+		l.Append(c)
 	}
 	for _, h := range tree.Headers {
-		blocks = append(blocks, Block{
-			h.Info().Line, h,
-		})
+		l := ls.At(h.Info().Line)
+		l.Append(h)
 	}
 	for _, d := range tree.Definitions {
-		blocks = append(blocks, Block{
-			d.Info().Line, d,
-		})
+		l := ls.At(d.Info().Line)
+		l.Append(d)
 	}
-	sort.Slice(blocks, func(i, j int) bool {
-		return blocks[i].Line < blocks[j].Line
+	sort.Slice(ls, func(i, j int) bool {
+		return ls[i].Number < ls[j].Number
 	})
 
-	return traverse(blocks, w)
+	return traverse(ls, w)
 }
 
-type Block struct {
-	Line    int
-	Content interface{}
-}
-
-func traverse(blocks []Block, w io.Writer) error {
+func traverse(ls Lines, w io.Writer) error {
 	i := printer.NewIndent(0)
-	for _, block := range blocks {
-		switch c := block.Content.(type) {
-		case *token.Comment:
-			printer.PrintComment(w, i, c)
-		case *ast.Include:
-			printer.PrintInclude(w, i, c)
-		case *ast.Namespace:
-			printer.PrintNamespace(w, i, c)
-		case *ast.Constant:
-			printer.PrintConstant(w, i, c)
-		case *ast.Enum:
-			printer.PrintEnum(w, i, c)
-		case *ast.Struct:
-			printer.PrintStruct(w, i, c)
-		case *ast.Service:
-			printer.PrintService(w, i, c)
+	for _, l := range ls {
+		for _, node := range l.Nodes {
+			switch n := node.(type) {
+			case *token.Comment:
+				printer.PrintComment(w, i, n)
+			case *ast.Include:
+				printer.PrintInclude(w, i, n)
+			case *ast.Namespace:
+				printer.PrintNamespace(w, i, n)
+			case *ast.Constant:
+				printer.PrintConstant(w, i, n)
+			case *ast.Enum:
+				printer.PrintEnum(w, i, n)
+			case *ast.Struct:
+				printer.PrintStruct(w, i, n)
+			case *ast.Service:
+				printer.PrintService(w, i, n)
+			}
 		}
 	}
 	return nil
