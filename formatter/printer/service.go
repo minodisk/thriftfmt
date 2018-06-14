@@ -7,24 +7,24 @@ import (
 	"go.uber.org/thriftrw/ast"
 )
 
-func PrintService(w io.Writer, i Indent, s *ast.Service) {
+func PrintService(w io.Writer, i *Indent, s *ast.Service) {
 	PrintDoc(w, i, s.Doc)
 	fmt.Fprintf(w, "service %s {", s.Name)
 	if len(s.Functions) > 0 {
 		fmt.Fprint(w, "\n\n")
-		i++
+		*i++
 		for _, function := range s.Functions {
 			//fmt.Println(function.Line)
 			PrintDoc(w, i, function.Doc)
 			fmt.Fprintf(w, "%s%s%s%s(", i, oneWay(function.OneWay), returnType(function.ReturnType), function.Name)
 			if len(function.Parameters) > 0 {
 				fmt.Fprint(w, "\n")
-				i++
+				*i++
 				for _, parameter := range function.Parameters {
 					//fmt.Println(parameter.Line)
 					PrintField(w, i, parameter)
 				}
-				i--
+				*i--
 				fmt.Fprintf(w, "%s)", i)
 			} else {
 				fmt.Fprintf(w, ")")
@@ -32,18 +32,18 @@ func PrintService(w io.Writer, i Indent, s *ast.Service) {
 
 			if len(function.Exceptions) > 0 {
 				fmt.Fprintf(w, " throws (\n")
-				i++
+				*i++
 				for _, exception := range function.Exceptions {
 					PrintField(w, i, exception)
 				}
-				i--
+				*i--
 				fmt.Fprintf(w, "%s)", i)
 			}
 
 			// function.Annotations
 			io.WriteString(w, "\n\n")
 		}
-		i--
+		*i--
 	}
 	fmt.Fprintf(w, "}\n\n")
 }

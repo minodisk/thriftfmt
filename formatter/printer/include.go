@@ -7,7 +7,7 @@ import (
 	"go.uber.org/thriftrw/ast"
 )
 
-func PrintInclude(w io.Writer, i Indent, include *ast.Include) {
+func PrintInclude(w io.Writer, i *Indent, include *ast.Include) {
 	fmt.Fprintf(w, "%sinclude ", i)
 	if include.Name != "" {
 		fmt.Fprintf(w, "%s ", include.Name)

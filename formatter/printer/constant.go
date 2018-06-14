@@ -7,7 +7,7 @@ import (
 	"go.uber.org/thriftrw/ast"
 )
 
-func PrintConstant(w io.Writer, i Indent, c *ast.Constant) {
+func PrintConstant(w io.Writer, i *Indent, c *ast.Constant) {
 	PrintDoc(w, i, c.Doc)
 	fmt.Fprintf(w, "%sconst %s %s = %s\n", i, c.Type, c.Name, constantValue(c.Value))
 }

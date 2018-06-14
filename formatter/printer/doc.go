@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-func PrintDoc(w io.Writer, i Indent, d string) {
+func PrintDoc(w io.Writer, i *Indent, d string) {
 	if len(d) == 0 {
 		return
 	}

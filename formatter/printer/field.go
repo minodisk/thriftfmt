@@ -7,7 +7,7 @@ import (
 	"go.uber.org/thriftrw/ast"
 )
 
-func PrintField(w io.Writer, i Indent, f *ast.Field) {
+func PrintField(w io.Writer, i *Indent, f *ast.Field) {
 	fmt.Fprintf(w, "%s%d: %s%s %s\n", i, f.ID, requiredness(f.Requiredness), f.Type, f.Name)
 }
 
