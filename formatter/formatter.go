@@ -54,8 +54,7 @@ type Block struct {
 }
 
 func traverse(blocks []Block, w io.Writer) error {
-	var i printer.Indent
-
+	i := printer.NewIndent(0)
 	for _, block := range blocks {
 		switch c := block.Content.(type) {
 		case *token.Comment:

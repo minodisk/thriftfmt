@@ -7,7 +7,7 @@ import (
 	"github.com/minodisk/thriftfmt/formatter/printer"
 )
 
-func TestPrintDoc(t *testing.T) {
+func TestDoc_PrintDoc(t *testing.T) {
 	for _, c := range []struct {
 		doc    string
 		indent *printer.Indent
