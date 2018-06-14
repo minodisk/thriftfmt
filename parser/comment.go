@@ -20,7 +20,7 @@ func ParseComments(buf []byte) []*token.Comment {
 				l := line
 				body := &bytes.Buffer{}
 			commentLoop:
-				for ; i < length; i++ {
+				for ; i < length-1; i++ {
 					c := buf[i]
 					body.WriteByte(c)
 					switch c {
@@ -28,7 +28,8 @@ func ParseComments(buf []byte) []*token.Comment {
 						line++
 					case '*':
 						if buf[i+1] == '/' {
-							body.WriteByte(buf[i+1])
+							i++
+							body.WriteByte(buf[i])
 							comments = append(comments, &token.Comment{
 								Line: l,
 								Body: body.String(),
