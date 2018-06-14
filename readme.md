@@ -1,4 +1,4 @@
-# thriftfmt
+# thriftfmt [![CircleCI](https://circleci.com/gh/minodisk/thriftfmt/tree/master.svg?style=svg)](https://circleci.com/gh/minodisk/thriftfmt/tree/master) [![codecov](https://codecov.io/gh/minodisk/thriftfmt/branch/master/graph/badge.svg)](https://codecov.io/gh/minodisk/thriftfmt)
 
 A formatter for Apache thrift.
 
