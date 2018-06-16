@@ -7,19 +7,33 @@ import (
 	"go.uber.org/thriftrw/ast"
 )
 
-func PrintEnum(w io.Writer, i *Indent, c *ast.Enum) {
-	PrintDoc(w, i, c.Doc)
-	fmt.Fprintf(w, "%senum %s {", i, c.Name)
-	if len(c.Items) == 0 {
-		fmt.Fprintf(w, "}")
-	} else {
-		fmt.Fprintf(w, "\n")
-		*i++
-		for _, item := range c.Items {
-			//fmt.Println(item.Line)
-			fmt.Fprintf(w, "%s%s = %d\n", i, item.Name, *item.Value)
-		}
-		*i--
-		fmt.Fprintf(w, "%s}\n\n", i)
+func PrintEnum(w io.Writer, indent *Indent, e *ast.Enum) {
+	PrintDoc(w, indent, e.Doc)
+	fmt.Fprintf(w, "%senum %s {", indent, e.Name)
+	if len(e.Items) == 0 {
+		fmt.Fprintf(w, "}\n")
+		return
 	}
+	fmt.Fprintf(w, "\n")
+	*indent++
+	last := len(e.Items) - 1
+	for i, item := range e.Items {
+		fmt.Fprintf(w, "%s%s", indent, item.Name)
+		if item.Value != nil {
+			fmt.Fprintf(w, " = %d", *item.Value)
+		}
+		if len(item.Annotations) > 0 {
+			fmt.Fprintf(w, " %s", ast.FormatAnnotations(item.Annotations))
+		}
+		if i != last {
+			fmt.Fprintf(w, ",")
+		}
+		fmt.Fprintf(w, "\n")
+	}
+	*indent--
+	fmt.Fprintf(w, "%s}", indent)
+	if len(e.Annotations) > 0 {
+		fmt.Fprintf(w, " %s", ast.FormatAnnotations(e.Annotations))
+	}
+	fmt.Fprint(w, "\n")
 }

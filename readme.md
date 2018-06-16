@@ -24,22 +24,15 @@ thriftfmt --help
 
 ### Syntax
 
-#### Head
-
-- [ ] namespace
-- [ ] enum
-- [ ] const
-- [ ] struct
-
-#### Definition
-
-- [ ] service
-- [ ] function
-
-##### Field
-
-- [ ] doc
-- [ ] annotation
+- [ ] Types
+- [ ] Typedefs
+- [x] Enums
+- [ ] Comments
+- [ ] Namespaces
+- [ ] Includes
+- [ ] Constants
+- [ ] Defining Structs
+- [ ] Defining Services 
 
 ### Command
 
