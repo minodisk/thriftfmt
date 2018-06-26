@@ -1,11 +1,11 @@
-package printer_test
+package printer
 
 import (
 	"testing"
 
 	"bytes"
 
-	"github.com/minodisk/thriftfmt/formatter/printer"
+	"github.com/minodisk/thriftfmt/printer"
 	"go.uber.org/thriftrw/ast"
 	"go.uber.org/thriftrw/idl"
 )

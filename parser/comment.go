@@ -7,7 +7,7 @@ import (
 )
 
 func ParseComments(buf []byte) []*token.Comment {
-	comments := []*token.Comment{}
+	var comments []*token.Comment
 	line := 1
 	length := len(buf)
 	for i := 0; i < length; i++ {

@@ -8,5 +8,5 @@ import (
 )
 
 func PrintComment(w io.Writer, i *Indent, c *token.Comment) {
-	fmt.Fprintf(w, "%s%s\n\n", i, c.Body)
+	fmt.Fprintf(w, "%s", c.Body)
 }

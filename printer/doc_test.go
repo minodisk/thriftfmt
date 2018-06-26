@@ -1,10 +1,10 @@
-package printer_test
+package printer
 
 import (
 	"bytes"
 	"testing"
 
-	"github.com/minodisk/thriftfmt/formatter/printer"
+	"github.com/minodisk/thriftfmt/printer"
 )
 
 func TestDoc_PrintDoc(t *testing.T) {

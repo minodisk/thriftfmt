@@ -1,9 +1,9 @@
-package printer_test
+package printer
 
 import (
 	"testing"
 
-	"github.com/minodisk/thriftfmt/formatter/printer"
+	"github.com/minodisk/thriftfmt/printer"
 )
 
 func TestIndent_ByReference(t *testing.T) {
